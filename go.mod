@@ -4,6 +4,7 @@ go 1.16
 
 require (
 	cloud.google.com/go v0.97.0
+	agones.dev/agones v1.21.0
 	git.blindage.org/21h/hcloud-dns v0.0.0-20200807003420-f768ffe03f8d
 	github.com/Azure/azure-sdk-for-go v46.4.0+incompatible
 	github.com/Azure/go-autorest/autorest v0.11.21
@@ -80,6 +81,7 @@ require (
 	k8s.io/klog/v2 v2.20.0 // indirect
 	k8s.io/utils v0.0.0-20210820185131-d34e5cb4466e // indirect
 	sigs.k8s.io/yaml v1.3.0 // indirect
+
 )
 
 replace k8s.io/klog/v2 => github.com/Raffo/knolog v0.0.0-20211016155154-e4d5e0cc970a
