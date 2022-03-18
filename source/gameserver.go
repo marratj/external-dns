@@ -20,7 +20,6 @@ import (
 	"context"
 	"fmt"
 	"strings"
-	"time"
 
 	agonesv1 "agones.dev/agones/pkg/apis/agones/v1"
 	agonesv1client "agones.dev/agones/pkg/client/clientset/versioned"
@@ -52,11 +51,15 @@ func NewGameServerSource(agonesClient agonesv1client.Interface, namespace string
 	agonesInformerFactory.Start(wait.NeverStop)
 
 	// wait for the local cache to be populated.
-	err := poll(time.Second, 60*time.Second, func() (bool, error) {
-		return gameServerInformer.Informer().HasSynced(), nil
-	})
-	if err != nil {
-		return nil, fmt.Errorf("failed to sync cache: %v", err)
+	// err := poll(time.Second, 60*time.Second, func() (bool, error) {
+	// 	return gameServerInformer.Informer().HasSynced(), nil
+	// })
+	// if err != nil {
+	// 	return nil, fmt.Errorf("failed to sync cache: %v", err)
+	// }
+
+	if err := waitForCacheSync(context.Background(), agonesInformerFactory); err != nil {
+		return nil, err
 	}
 
 	return &gameServerSource{
