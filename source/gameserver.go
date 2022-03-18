@@ -19,6 +19,7 @@ package source
 import (
 	"context"
 	"fmt"
+	"strconv"
 	"strings"
 
 	agonesv1 "agones.dev/agones/pkg/apis/agones/v1"
@@ -28,6 +29,8 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/tools/cache"
+
+	log "github.com/sirupsen/logrus"
 
 	"sigs.k8s.io/external-dns/endpoint"
 )
@@ -44,7 +47,9 @@ func NewGameServerSource(agonesClient agonesv1client.Interface, namespace string
 
 	gameServerInformer.Informer().AddEventHandler(
 		cache.ResourceEventHandlerFuncs{
-			AddFunc: func(obj interface{}) {},
+			AddFunc: func(obj interface{}) {
+				log.Debug("gameserver added")
+			},
 		},
 	)
 
@@ -79,19 +84,23 @@ func (gss *gameServerSource) Endpoints(ctx context.Context) ([]*endpoint.Endpoin
 
 	endpoints := []*endpoint.Endpoint{}
 	for _, gs := range gameServers {
+		log.Debugf("creating endpoint for gameserver %s", gs.Name)
 		if domain, ok := gs.Annotations[hostnameAnnotationKey]; ok && !isBeforePodCreated(gs) {
-			address := gs.Status.Address
+			log.Debugf("Hostname %s set, extract info from gameserver", domain)
+			//address := gs.Status.Address
 			subdomain := gs.Name
 
 			if customDomain, ok := gs.Annotations[customSubdomainKey]; ok {
+				log.Debugf("Custom domain %s set, extract info from gameserver", customDomain)
 				subdomain = customDomain
 			}
 
 			dnsName := fmt.Sprintf("%s.%s", subdomain, domain)
 
-			endpoints = append(endpoints, endpoint.NewEndpoint(dnsName, endpoint.RecordTypeA, address))
+			// endpoints = append(endpoints, endpoint.NewEndpoint(dnsName, endpoint.RecordTypeA, address))
 
 			if service, ok := gs.Annotations[gameserverServiceNameKey]; ok {
+				log.Debugf("Service Name %s set, extract info from gameserver", service)
 				var protocol string
 
 				if p, ok := gs.Annotations[gameserverProtocolKey]; ok {
@@ -102,9 +111,16 @@ func (gss *gameServerSource) Endpoints(ctx context.Context) ([]*endpoint.Endpoin
 
 				port := gs.Status.Ports[0].Port
 
-				endpoints = append(endpoints, endpoint.NewEndpoint(
+				recordTTL := endpoint.TTL(300)
+				if ttl, ok := gs.Annotations[ttlAnnotationKey]; ok {
+					log.Debugf("TTL %s set, extract info from gameserver", ttl)
+					annoTTL, _ := strconv.Atoi(ttl)
+					recordTTL = endpoint.TTL(annoTTL)
+				}
+
+				endpoints = append(endpoints, endpoint.NewEndpointWithTTL(
 					newSrvDNSName(service, protocol, dnsName),
-					endpoint.RecordTypeSRV,
+					endpoint.RecordTypeSRV, recordTTL,
 					newSrvTargetName(port, dnsName)))
 			}
 		}

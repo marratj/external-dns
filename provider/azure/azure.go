@@ -439,5 +439,11 @@ func extractAzureTargets(recordSet *dns.RecordSet) []string {
 			return []string{(*values)[0]}
 		}
 	}
+
+	// Check for SRV records
+	srvRecords := properties.SrvRecords
+	if srvRecords != nil && len(*srvRecords) > 0 && (*srvRecords)[0].Target != nil {
+		return []string{fmt.Sprintf("%d %d %d %s", *(*srvRecords)[0].Priority, *(*srvRecords)[0].Weight, *(*srvRecords)[0].Port, *(*srvRecords)[0].Target)}
+	}
 	return []string{}
 }
