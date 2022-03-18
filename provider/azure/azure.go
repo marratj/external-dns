@@ -389,6 +389,13 @@ func (p *AzureProvider) newRecordSet(endpoint *endpoint.Endpoint) (dns.RecordSet
 				},
 			},
 		}, nil
+	case dns.SRV:
+		return dns.RecordSet{
+			RecordSetProperties: &dns.RecordSetProperties{
+				TTL:        to.Int64Ptr(ttl),
+				SrvRecords: extractSrvTarget(endpoint),
+			},
+		}, nil
 	}
 	return dns.RecordSet{}, fmt.Errorf("unsupported record type '%s'", endpoint.RecordType)
 }
