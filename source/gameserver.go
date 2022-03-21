@@ -88,14 +88,22 @@ func (gss *gameServerSource) Endpoints(ctx context.Context) ([]*endpoint.Endpoin
 		if domain, ok := gs.Annotations[hostnameAnnotationKey]; ok && !isBeforePodCreated(gs) {
 			log.Debugf("Hostname %s set, extract info from gameserver", domain)
 			//address := gs.Status.Address
-			subdomain := gs.Name
+			subdomain := domain
 
 			if customDomain, ok := gs.Annotations[customSubdomainKey]; ok {
 				log.Debugf("Custom domain %s set, extract info from gameserver", customDomain)
 				subdomain = customDomain
 			}
 
-			dnsName := fmt.Sprintf("%s.%s", subdomain, domain)
+			gsHost := gs.Status.NodeName
+			fleetName := gs.Name
+			if fleet, ok := gs.Labels["agones.dev/fleet"]; ok {
+				log.Debugf("Fleet name %s found, extract info from gameserver", fleet)
+				fleetName = gs.Labels["agones.dev/fleet"]
+			}
+
+			dnsName := fmt.Sprintf("%s.%s", fleetName, domain)
+			targetName := fmt.Sprintf("%s.%s", gsHost, subdomain)
 
 			// endpoints = append(endpoints, endpoint.NewEndpoint(dnsName, endpoint.RecordTypeA, address))
 
@@ -121,7 +129,7 @@ func (gss *gameServerSource) Endpoints(ctx context.Context) ([]*endpoint.Endpoin
 				endpoints = append(endpoints, endpoint.NewEndpointWithTTL(
 					newSrvDNSName(service, protocol, dnsName),
 					endpoint.RecordTypeSRV, recordTTL,
-					newSrvTargetName(port, dnsName)))
+					newSrvTargetName(port, targetName)))
 			}
 		}
 	}
